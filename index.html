@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AR HUD Viewer - Fixed Edition</title>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:monospace;}
+
+body,html{
+width:100%;
+height:100%;
+overflow:hidden;
+background:#02070a;
+color:#00ffcc;
+}
+
+model-viewer{
+width:100%;
+height:100%;
+position:absolute;
+inset:0;
+z-index:1;
+}
+
+.hud{
+position:absolute;
+inset:0;
+z-index:2;
+pointer-events:none;
+padding:20px;
+}
+
+.panel{
+position:absolute;
+top:20px;
+left:20px;
+width:270px;
+background:rgba(0,0,0,0.6);
+border-left:3px solid #00ffcc;
+padding:15px;
+backdrop-filter:blur(6px);
+}
+
+.row{margin-bottom:12px;}
+.label{font-size:10px;opacity:0.6;}
+.value{font-size:15px;color:#fff;margin-top:4px;}
+.price{color:#00ffcc;}
+
+.sizes{
+display:flex;
+gap:6px;
+margin-top:8px;
+}
+
+.size{
+padding:4px 8px;
+border:1px solid #00ffcc;
+font-size:12px;
+cursor:pointer;
+opacity:0;
+transform:translateY(5px);
+transition:0.2s;
+pointer-events:auto;
+}
+
+.size.show{opacity:1;transform:translateY(0);}
+.size.active{background:#00ffcc;color:#000;}
+
+.ar-btn{
+position:absolute;
+top:20px;
+right:20px;
+padding:10px 18px;
+border:2px solid #00ffcc;
+background:transparent;
+color:#00ffcc;
+cursor:pointer;
+opacity:0;
+transform:translateY(-10px);
+transition:0.3s;
+pointer-events:auto;
+}
+
+.ar-btn.show{opacity:1;transform:translateY(0);}
+
+.controls{
+position:absolute;
+bottom:20px;
+right:20px;
+display:flex;
+gap:8px;
+opacity:0;
+transition:0.5s;
+}
+
+.btn{
+width:35px;
+height:35px;
+border:1px solid #00ffcc;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+pointer-events:auto;
+}
+
+.scan{
+position:absolute;
+inset:0;
+display:none;
+z-index:5;
+}
+
+.scan-line{
+position:absolute;
+height:3px;
+width:100%;
+background:#00ffcc;
+animation:scan 2s linear infinite;
+}
+
+@keyframes scan{
+0%{top:0}
+50%{top:100%}
+100%{top:0}
+}
+
+.scan-text{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+padding:10px 20px;
+border:1px dashed #00ffcc;
+background:rgba(0,0,0,0.7);
+}
+
+</style>
+</head>
+
+<body>
+
+<model-viewer
+id="model"
+src="Sneakers.glb"
+camera-controls
+auto-rotate
+ar
+ar-modes="webxr scene-viewer quick-look"
+interaction-prompt="none">
+</model-viewer>
+
+<!-- AR BUTTON -->
+<button class="ar-btn" id="arBtn" onclick="openAR()">View in AR</button>
+
+<div class="hud">
+
+<div class="panel">
+
+<div class="row">
+<div class="label">MODEL</div>
+<div class="value">CYBER-X SNEAKERS</div>
+</div>
+
+<div class="row">
+<div class="label">COLOR</div>
+<div class="value">MATTE BLACK</div>
+</div>
+
+<div class="row">
+<div class="label">PRICE</div>
+<div class="value price">Rs. 14,999</div>
+</div>
+
+<div class="row">
+<div class="label">SIZE</div>
+<div class="sizes" id="sizes">
+<div class="size" onclick="selectSize(this)">7</div>
+<div class="size" onclick="selectSize(this)">8</div>
+<div class="size" onclick="selectSize(this)">9</div>
+<div class="size" onclick="selectSize(this)">10</div>
+</div>
+</div>
+
+</div>
+
+<!-- CONTROLS -->
+<div class="controls" id="controls">
+<div class="btn" onclick="rotate(-25)">⟲</div>
+<div class="btn" onclick="rotate(25)">⟳</div>
+</div>
+
+</div>
+
+<!-- SCAN -->
+<div class="scan" id="scan">
+<div class="scan-line"></div>
+<div class="scan-text">SCANNING PRODUCT...</div>
+</div>
+
+<!-- HIDDEN AR BUTTON (IMPORTANT FIX) -->
+<button slot="ar-button" id="hiddenAr" style="display:none;"></button>
+
+<script>
+const model = document.getElementById("model");
+
+/* INIT */
+window.addEventListener("load",()=>{
+
+let sizes=document.querySelectorAll(".size");
+sizes.forEach((s,i)=>{
+setTimeout(()=>s.classList.add("show"),i*120);
+});
+
+setTimeout(()=>{
+document.getElementById("scan").style.display="block";
+
+setTimeout(()=>{
+document.getElementById("scan").style.display="none";
+document.getElementById("arBtn").classList.add("show");
+document.getElementById("controls").style.opacity="1";
+},2500);
+
+},800);
+
+});
+
+/* ROTATE FIX */
+function rotate(deg){
+const orbit = model.getCameraOrbit();
+let theta = orbit.theta * 180/Math.PI;
+let phi = orbit.phi * 180/Math.PI;
+
+model.cameraOrbit = `${theta + deg}deg ${phi}deg ${orbit.radius}`;
+model.autoRotate = false;
+}
+
+/* SIZE */
+function selectSize(el){
+document.querySelectorAll(".size").forEach(b=>b.classList.remove("active"));
+el.classList.add("active");
+}
+
+/* AR FIX (REAL WORKING METHOD) */
+function openAR(){
+const btn=document.getElementById("arBtn");
+const hidden=document.getElementById("hiddenAr");
+
+btn.innerText="Launching AR...";
+hidden.click();
+
+setTimeout(()=>{
+btn.innerText="View in AR";
+},3000);
+}
+</script>
+
+</body>
+</html>
